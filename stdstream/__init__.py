@@ -50,19 +50,19 @@ class Publisher:
 
   def pre_exec(self):
     message = "%s STARTING: '%s'" % (datetime.datetime.now(), ' '.join(self.command))
-    self.publish_topic(message, 'output', 'sys.info')
+    self.publish_topic(message, 'topic_logs', 'sys.info')
 
   def post_exec(self):
     message = "%s FINISHED: '%s' %s" % (datetime.datetime.now(), ' '.join(self.command), self.return_code)
-    self.publish_topic(message, 'output', 'sys.info')
+    self.publish_topic(message, 'topic_logs', 'sys.info')
 
   def split_output(self):
     min_runtime = datetime.timedelta(seconds=20)
     start_time = datetime.datetime.now()
+    self.pre_exec()
     p = Popen(self.command,
               stdout=PIPE,
-              stderr=PIPE,
-              preexec_fn=self.pre_exec)
+              stderr=PIPE)
     stdout = []
     stderr = []
     while True:
@@ -72,11 +72,11 @@ class Publisher:
         if fd == p.stdout.fileno():
           read = p.stdout.readline()
           if read != '':
-            self.publish_topic(read, 'output', 'sys.stdout')
+            self.publish_topic(read, 'topic_logs', 'sys.stdout')
         if fd == p.stderr.fileno():
           read = p.stderr.readline()
           if read != '':
-            self.publish_topic(read, 'output', 'sys.stderr')
+            self.publish_topic(read, 'topic_logs', 'sys.stderr')
       return_code = p.poll()
       if return_code != None and (datetime.datetime.now() - min_runtime > start_time):
         self.return_code = return_code

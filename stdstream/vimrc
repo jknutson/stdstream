@@ -1,0 +1,192 @@
+" Infect Pathogen plugins
+execute pathogen#infect()
+
+syntax on
+set background=dark
+colorscheme solarized
+
+" for jinja syntax
+au BufNewFile,BufRead *.html,*.htm,*.shtml,*.stm set ft=jinja
+" set ruler
+" set clipboard=unnamed
+" set showmode
+:filetype on
+set nocompatible   " Disable vi-compatibility
+set laststatus=2   " Always show the statusline
+set encoding=utf-8 " Necessary to show Unicode glyphs
+
+" better line up/down nav with line wraps
+nmap j gj
+nmap k gk
+
+" better indentation
+vnoremap < <gv
+vnoremap > >gv
+
+" shift-tab
+" " for command mode
+nmap <S-Tab> <<
+" " for insert mode
+imap <S-Tab> <Esc><<i
+
+" set tabmode
+:nmap \t :set expandtab tabstop=4 shiftwidth=4 softtabstop=4<CR>
+:nmap \T :set expandtab tabstop=8 shiftwidth=8 softtabstop=4<CR>
+:nmap \M :set noexpandtab tabstop=8 softtabstop=4 shiftwidth=4<CR>
+:nmap \m :set expandtab tabstop=2 shiftwidth=2 softtabstop=2<CR>
+
+" highlight current line red/white
+" :hi CursorLine cterm=NONE ctermbg=darkred ctermfg=white guibg=darkred guifg=white
+
+" more subtle highlight, on by default
+:set cursorline
+" toggle cursorline
+:nnoremap <silent> <Leader>c :set cursorline!<CR>
+
+" moving around windows
+map <c-j> <c-w>j
+map <c-k> <c-w>k
+map <c-l> <c-w>l
+map <c-h> <c-w>h
+
+map <C-J> <C-W>j<C-W>_
+map <C-k> <C-W>k<C-W>_
+map <C-h> <C-W>h<C-W>_
+map <C-l> <C-W>l<C-W>_
+
+" Folding
+set foldenable
+set foldlevelstart=10
+set foldnestmax=10
+" space open/closes folds
+nnoremap <space> za
+set foldmethod=indent
+
+" move to beginning/end of line
+nnoremap B ^
+nnoremap E $
+
+" highlight last inserted text
+nnoremap gV `[v`]
+
+:nmap <silent>\l :setlocal number!<CR>
+:nmap <silent> \o :set paste!<CR>
+set pastetoggle=<F2>
+
+:nmap j gj
+:nmap k gk
+
+" highlight whitespace
+highlight LiteralTabs ctermbg=darkgreen guibg=darkgreen
+match LiteralTabs /\s\  /
+highlight ExtraWhitespace ctermbg=darkgreen guibg=darkgreen
+match ExtraWhitespace /\s\+$/
+
+" tab options
+set tabstop=2
+set expandtab
+set softtabstop=2
+set shiftwidth=2
+
+" search options
+:set incsearch
+:set ignorecase
+:set smartcase
+:set hlsearch
+:nmap <leader>q :nohlsearch<CR>
+
+" buffer movement/operations
+:nmap <C-e> :e#<CR>
+:nmap <C-n> :bnext<CR>
+:nmap <C-p> :bprev<CR>
+" Delete buffer
+" :nmap <leader>q :bd<CR>
+" allow hidden buffers with unsaved changes
+:set hidden
+
+" CtrlP settings
+:nmap <silent>; :CtrlPMixed<CR>
+:let g:ctrlp_map = '<Leader>t'
+:let g:ctrlp_match_window_bottom = 0
+:let g:ctrlp_match_window_reversed = 0
+:let g:ctrlp_custom_ignore = '\v\~$|\.(o|swp|pyc|wav|mp3|ogg|blend)$|(^|[/\\])\.(hg|git|bzr)($|[/\\])|__init__\.py'
+:let g:ctrlp_working_path_mode = 0
+:let g:ctrlp_dotfiles = 0
+:let g:ctrlp_switch_buffer = 0
+
+:nmap <silent>\e :NERDTreeToggle<CR>
+:nmap <silent>\f :TagbarToggle<CR>
+
+" always show a line above/below the cursor
+if !&scrolloff
+  set scrolloff=1
+endif
+if !&sidescrolloff
+  set sidescrolloff=5
+endif
+set display+=lastline
+
+let g:jedi#use_tabs_not_buffers = 0
+let g:jedi#goto_assignments_command = "<leader>g"
+let g:jedi#goto_definitions_command = "<leader>d"
+let g:jedi#documentation_command = "K"
+let g:jedi#usages_command = "<leader>n"
+let g:jedi#completions_command = "<C-Space>"
+let g:jedi#rename_command = "<leader>r"
+let g:jedi#show_call_signatures = "1"
+
+" Return to last edit position when opening files (You want this!)
+autocmd BufReadPost *
+     \ if line("'\"") > 0 && line("'\"") <= line("$") |
+     \   exe "normal! g`\"" |
+     \ endif
+" Remember info about open buffers on close
+set viminfo^=%
+
+set ai "Auto indent
+set si "Smart indent
+
+" Remove the Windows ^M - when the encodings gets messed up
+noremap <Leader>m mmHmt:%s/<C-V><cr>//ge<cr>'tzt'm
+
+" toggle gundo
+nnoremap <leader>u :GundoToggle<CR>
+
+" powerline
+" python import sys; sys.path.append("/Library/Python/2.7/site-packages")
+python from powerline.vim import setup as powerline_setup
+python powerline_setup()
+python del powerline_setup
+
+augroup reload_vimrc " {
+    autocmd!
+    autocmd BufWritePost $MYVIMRC source $MYVIMRC
+augroup END " }
+
+" function to rename files without leaving vim
+function! RenameFile()
+    let old_name = expand('%')
+    let new_name = input('New file name: ', expand('%'), 'file')
+    if new_name != '' && new_name != old_name
+        exec ':saveas ' . new_name
+        exec ':silent !rm ' . old_name
+        redraw!
+    endif
+endfunction
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" RemoveFancyCharacters COMMAND
+" Remove smart quotes, etc.
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+function! RemoveFancyCharacters()
+    let typo = {}
+    let typo["“"] = '"'
+    let typo["”"] = '"'
+    let typo["‘"] = "'"
+    let typo["’"] = "'"
+    let typo["–"] = '--'
+    let typo["—"] = '---'
+    let typo["…"] = '...'
+    :exe ":%s/".join(keys(typo), '\|').'/\=typo[submatch(0)]/ge'
+endfunction
+command! RemoveFancyCharacters :call RemoveFancyCharacters()

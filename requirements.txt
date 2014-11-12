@@ -1,0 +1,7 @@
+MySQL-python==1.2.5
+SQLAlchemy==0.9.8
+gnureadline==6.3.3
+ipython==2.3.0
+pika==0.9.14
+powerline-status==dev-6b6245c5b33a4a50fc6a37b13eb23f3005b583f3
+wsgiref==0.1.2

@@ -4,6 +4,9 @@ import sys
 import select
 from config import config
 from subprocess import check_output, Popen, PIPE, STDOUT
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from stdstream.models import LogEntry, RsyncLog
 
 class Publisher:
   def __init__(self, command=None):
@@ -97,24 +100,96 @@ class Subscriber:
   """ Represents an object for getting things from the Queue """
 
   def __init__(self):
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    from stdstream.models import LogEntry
     self.sqlalchemy_uri = config['SQLALCHEMY_URI']
     self.rabbitmq_params = config['RABBITMQ_PARAMS']
     self.queue = 'stdout'
-    self.session = sessionmaker(bind=create_engine(self.sqlalchemy_uri))
+    Session = sessionmaker(bind=create_engine(self.sqlalchemy_uri))
+    self.session = Session()
 
   def callback(self, ch, method, properties, body):
-    self.session.add(LogEntry(data=body))
+    #self.session.add(LogEntry(data=body))
     #self.session.commit()
     print " [x] Received %r" % (body,)
 
+  def rsync_topic_callback(self, ch, method, properties, body):
+    print 'callback called'
+    data = body.split('|')
+    print data
+    if len(data) > 4:
+      timestamp = data[0]
+      pid = data[1]
+      itemized_changes = data[2]
+      filename = data[3]
+      bytes_transferred = data[4]
+      l = RsyncLog(timestamp=timestamp,
+                   pid=pid,
+                   itemized_changes=itemized_changes,
+                   filename=filename,
+                   bytes_transferred=bytes_transferred)
+      self.session.add(l)
+      #self.session.commit()
+      print " [x] commited %r" % data
+    else:
+      print 'weird data: %s' % body
+
+  def callback_test(self, ch, method, properties, body):
+    print body
+    data = body.split('|')
+    if len(data) > 4:
+      print ' '.join(data)
+
+
+  def consume_topic(self):
+    exchange = 'topic_logs'
+    queue = 'stdout'
+    connection = pika.BlockingConnection(self.rabbitmq_params)
+    channel = connection.channel()
+    channel.exchange_declare(exchange=exchange,
+                             type='topic')
+    #result = channel.queue_declare(exclusive=True)
+    #queue = result.method.queue
+    channel.queue_bind(exchange=exchange,
+                       queue=queue,
+                       routing_key='sys.stdout')
+    channel.queue_declare(queue=queue)
+    channel.basic_consume(self.rsync_topic_callback,
+                          queue=queue,
+                          no_ack=True)
+    print "start consuming"
+    channel.start_consuming()
+
+  def consume_gen(self):
+    exchange = 'topic_logs'
+    queue =  'stdout'
+    connection = pika.BlockingConnection(self.rabbitmq_params)
+    channel = connection.channel()
+    for method_frame, properties, body in channel.consume(queue=queue):
+      #print method_frame
+      #print properties
+      #print body
+      data = body.split('|')
+      print data
+      if len(data) > 4:
+        timestamp = data[0]
+        pid = data[1]
+        itemized_changes = data[2]
+        filename = data[3]
+        bytes_transferred = data[4]
+        l = RsyncLog(timestamp=timestamp,
+                     pid=pid,
+                     itemized_changes=itemized_changes,
+                     filename=filename,
+                     bytes_transferred=bytes_transferred)
+        self.session.add(l)
+        self.session.commit()
+        print " [x] commited %r" % data
+
+
   def consume_messages(self):
-    with pika.BlockingConnection(self.rabbitmq_params) as connection:
-      channel = connection.channel()
-      channel.queue_declare(queue=self.queue)
-      channel.basic_consume(self.callback,
-                            queue=self.queue,
-                            no_ack=True)
-      channel.start_consuming()
+    connection = pika.BlockingConnection(self.rabbitmq_params)
+    channel = connection.channel()
+    channel.queue_declare(queue=self.queue)
+    channel.basic_consume(self.rsync_topic_callback,
+                          queue=self.queue,
+                          no_ack=True)
+    channel.start_consuming()
